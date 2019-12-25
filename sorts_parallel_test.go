@@ -6,11 +6,11 @@ import (
 )
 
 func TestQsortParallel(t *testing.T) {
-	const N_ELEMS = 1000000
+	const N_ELEMS = 100000000
 	var nums [N_ELEMS]int
 
 	// repeat 10 tests
-	for j := 0; j < 100; j++ {
+	for j := 0; j < 1; j++ {
 		for i := 0; i < N_ELEMS; i++ {
 			nums[i] = rand.Int() % N_ELEMS
 		}
@@ -28,24 +28,28 @@ func TestQsortParallel(t *testing.T) {
 
 	// wrong indexes should just do nothing
 	QsortParallel(nums[:],-1,1)
-
 }
 
-func BenchmarkQsortParallel(b *testing.B) {
-	const N_ELEMS = 1000000
-	var nums [N_ELEMS]int
+
+
+func TestMergeSort(t *testing.T) {
+	const N_ELEMS = 100000000
+	a := make([]int, N_ELEMS);
 
 	for i := 0; i < N_ELEMS; i++ {
-
-		for j:= 0 ; j < b.N; j++ {
-			nums[i] = rand.Int() % b.N
-		}
-		
+		a[i] = rand.Int() % N_ELEMS
 	}
 
-	b.ResetTimer()
+	a = ParallelMergeSort(a)
 
-	QsortParallel(nums[:],0,N_ELEMS - 1)
-
+	before := a[0]
+		for i := 1; i < N_ELEMS; i++ {
+			if (a[i] < before) {
+				t.Errorf("Wrong order in the elements %d %d", a[i], before)
+			}
+			before = a[i]
+	}
 }
+
+
 
