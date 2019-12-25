@@ -3,9 +3,14 @@ package qsortparallel
 import "sync"
 import "sync/atomic"
 import "runtime"
+
+// count how many threads
+// are ongoing to avoid scheduling overheads
+// with more goroutines than cores
 var concurrent_thread_count int32
 
-var THREAD_AMOUNT int32 = int32(runtime.NumCPU())
+var _thread_amount int32 = int32(runtime.NumCPU())
+
 
 func Swap(array []int, i,j int) {
 	temp := array[j]
@@ -13,7 +18,7 @@ func Swap(array []int, i,j int) {
 	array[i] = temp
 }
 
-
+// for quicksort
 func Partition(array []int, pivot,start,end int) int {
 	Swap(array, pivot, end)
 
@@ -38,8 +43,8 @@ func Partition(array []int, pivot,start,end int) int {
 	return i
 }
 
-// InsertionSort: sort with insertion sort if array size
-// is too small
+// InsertionSort: self explanatory but with start and end
+// indices to be used with quicksort
 func InsertionSort(array []int, start, end int) {
 	var min_till_now int
 	for i := start; i < end; i++ {
@@ -60,7 +65,7 @@ func InsertionSort(array []int, start, end int) {
 }
 
 //QsortParallel: sort with qsort in parallel
-// start is start,end is start index, end index
+// start,end is start index, end index
 func QsortParallel(array []int, start, end int) {
 	// invalid indices
 	if (start > end || start < 0 || end < 0) {
@@ -95,7 +100,7 @@ func _qsortParallelImpl(array []int, start, end int, wg* sync.WaitGroup) {
 	pivot_real_pos := Partition(array, pivot, start, end)
 
 	wg.Add(2)
-	if (atomic.LoadInt32(&concurrent_thread_count) <= THREAD_AMOUNT) {
+	if (atomic.LoadInt32(&concurrent_thread_count) <= _thread_amount) {
 
 		atomic.AddInt32(&concurrent_thread_count,1)
 
@@ -106,7 +111,7 @@ func _qsortParallelImpl(array []int, start, end int, wg* sync.WaitGroup) {
 		_qsortParallelImpl(array, start, pivot_real_pos - 1, wg)
 	}
 
-	if (atomic.LoadInt32(&concurrent_thread_count) <= THREAD_AMOUNT) {
+	if (atomic.LoadInt32(&concurrent_thread_count) <= _thread_amount) {
 
 		atomic.AddInt32(&concurrent_thread_count,1)
 
@@ -118,6 +123,8 @@ func _qsortParallelImpl(array []int, start, end int, wg* sync.WaitGroup) {
 	}
 }
 
+// Merge: merge two slices of ints
+// for mergesort
 func Merge(a []int, b []int) []int {
 	sizea := len(a);
 	sizeb := len(b);
@@ -162,7 +169,7 @@ func _parallelMergeSort(a []int, ret chan []int, wg* sync.WaitGroup) {
 	chan_right := make(chan []int,1)
 
 	wg.Add(2)
-	if (atomic.LoadInt32(&concurrent_thread_count) <= THREAD_AMOUNT) {
+	if (atomic.LoadInt32(&concurrent_thread_count) <= _thread_amount) {
 
 		atomic.AddInt32(&concurrent_thread_count,1)
 
@@ -173,7 +180,7 @@ func _parallelMergeSort(a []int, ret chan []int, wg* sync.WaitGroup) {
 		_parallelMergeSort(a[0:mid], chan_left, wg)
 	}
 
-	if (atomic.LoadInt32(&concurrent_thread_count) <= THREAD_AMOUNT) {
+	if (atomic.LoadInt32(&concurrent_thread_count) <= _thread_amount) {
 
 		atomic.AddInt32(&concurrent_thread_count,1)
 
@@ -192,6 +199,8 @@ func _parallelMergeSort(a []int, ret chan []int, wg* sync.WaitGroup) {
 	ret <- Merge(left_arr, right_arr)
 }
 
+// ParallelMergeSort: a parallel version of mergesort
+// which assigns work to goroutines if threads are available
 func ParallelMergeSort(a []int) []int {
 
 	atomic.AddInt32(&concurrent_thread_count,1)
